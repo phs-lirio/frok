@@ -1,0 +1,876 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>L Investigation System</title>
+
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&display=swap" rel="stylesheet">
+
+<style>
+*{
+    margin:0;
+    padding:0;
+    box-sizing:border-box;
+}
+
+body{
+    background:#020202;
+    color:rebeccapurple;
+    font-family:'Orbitron', monospace;
+    overflow:hidden;
+    height:100vh;
+}
+
+canvas{
+    position:fixed;
+    top:0;
+    left:0;
+    width:100%;
+    height:100%;
+    z-index:0;
+}
+
+.overlay{
+    position:fixed;
+    width:100%;
+    height:100%;
+    background:radial-gradient(circle at center, transparent 0%, rgba(0,0,0,0.8) 100%);
+    z-index:1;
+}
+
+.scanline{
+    position:fixed;
+    width:100%;
+    height:4px;
+    background:rgba(0,255,100,0.2);
+    box-shadow:0 0 20px #00ff88;
+    animation:scan 4s linear infinite;
+    z-index:2;
+}
+
+@keyframes scan{
+    from{ top:0; }
+    to{ top:100%; }
+}
+
+.container{
+    position:relative;
+    z-index:5;
+    padding:20px;
+}
+
+.header{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    margin-bottom:20px;
+    border-bottom:1px solid #00ff88;
+    padding-bottom:10px;
+}
+
+.logo{
+    font-size:34px;
+    color:#00ffcc;
+    text-shadow:0 0 10px #00ff88;
+    letter-spacing:3px;
+}
+
+.status{
+    color:red;
+    font-size:14px;
+    animation:blink 1s infinite;
+}
+
+@keyframes blink{
+    50%{
+        opacity:0.3;
+    }
+}
+
+.main{
+    display:grid;
+    grid-template-columns:1fr 1fr 1fr;
+    gap:20px;
+}
+
+.panel{
+    background:rgba(0,0,0,0.7);
+    border:1px solid rgba(0,255,100,0.4);
+    backdrop-filter:blur(6px);
+    padding:15px;
+    box-shadow:0 0 20px rgba(0,255,100,0.15);
+    transition:0.3s;
+    min-height:320px;
+}
+
+.panel:hover{
+    transform:translateY(-5px);
+    box-shadow:0 0 30px rgba(0,255,100,0.3);
+}
+
+.panel h2{
+    margin-bottom:15px;
+    color:#00ffee;
+    border-bottom:1px solid rgba(0,255,100,0.2);
+    padding-bottom:8px;
+}
+
+.suspect{
+    padding:12px;
+    margin-bottom:10px;
+    background:rgba(255,255,255,0.03);
+    border-left:4px solid red;
+    transition:0.3s;
+}
+
+.suspect:hover{
+    background:rgba(0,255,100,0.1);
+    transform:translateX(5px);
+}
+
+.percentage{
+    color:red;
+    text-shadow:0 0 8px red;
+}
+
+.terminal{
+    margin-top:20px;
+    height:220px;
+    background:black;
+    border:1px solid #00ff88;
+    padding:15px;
+    overflow:hidden;
+    position:relative;
+}
+
+.terminal::before{
+    content:'';
+    position:absolute;
+    top:0;
+    left:0;
+    width:100%;
+    height:100%;
+    background:linear-gradient(
+        rgba(0,255,100,0.02) 50%,
+        transparent 50%
+    );
+    background-size:100% 4px;
+    pointer-events:none;
+}
+
+.typing{
+    white-space:pre-line;
+    line-height:1.8;
+    animation:fade 2s ease;
+}
+
+@keyframes fade{
+    from{
+        opacity:0;
+    }
+    to{
+        opacity:1;
+    }
+}
+
+.warning{
+    position:absolute;
+    bottom:20px;
+    right:20px;
+    color:red;
+    font-size:18px;
+    text-shadow:0 0 10px red;
+    animation:blink 1s infinite;
+}
+
+.map{
+    width:100%;
+    height:200px;
+    background:linear-gradient(to bottom,#031,#000);
+    border:1px solid rgba(0,255,100,0.3);
+    position:relative;
+    overflow:hidden;
+}
+
+.point{
+    width:12px;
+    height:12px;
+    border-radius:50%;
+    background:red;
+    position:absolute;
+    box-shadow:0 0 15px red;
+    animation:pulse 1s infinite;
+}
+
+@keyframes pulse{
+    50%{
+        transform:scale(1.5);
+        opacity:0.5;
+    }
+}
+
+.point:nth-child(1){ top:30%; left:40%; }
+.point:nth-child(2){ top:60%; left:70%; }
+.point:nth-child(3){ top:45%; left:20%; }
+
+.ai-box{
+    margin-top:15px;
+    padding:15px;
+    border:1px solid rgba(0,255,100,0.3);
+    background:rgba(0,255,100,0.03);
+}
+
+.progress{
+    width:100%;
+    height:18px;
+    background:#111;
+    margin-top:10px;
+    overflow:hidden;
+    border:1px solid rgba(0,255,100,0.2);
+}
+
+.progress-bar{
+    width:87%;
+    height:100%;
+    background:linear-gradient(90deg, red, #00ff88);
+    animation:load 4s infinite alternate;
+}
+
+@keyframes load{
+    from{
+        width:40%;
+    }
+    to{
+        width:87%;
+    }
+}
+
+.footer{
+    margin-top:15px;
+    display:flex;
+    justify-content:space-between;
+    color:#00aa66;
+    font-size:12px;
+}
+
+/* MODAL */
+.profile-modal{
+    position:fixed;
+    top:0;
+    left:0;
+    width:100%;
+    height:100%;
+    background:rgba(0,0,0,0.85);
+    display:none;
+    justify-content:center;
+    align-items:center;
+    z-index:999;
+}
+
+.profile-box{
+    width:400px;
+    max-width:90%;
+    background:#050505;
+    border:1px solid #00ff88;
+    box-shadow:0 0 30px rgba(0,255,100,0.3);
+    padding:25px;
+    position:relative;
+    animation:popup 0.3s ease;
+}
+
+@keyframes popup{
+    from{
+        transform:scale(0.8);
+        opacity:0;
+    }
+    to{
+        transform:scale(1);
+        opacity:1;
+    }
+}
+
+.profile-box h2{
+    color:#00ffee;
+    margin-bottom:20px;
+}
+
+.profile-box p{
+    margin-bottom:10px;
+    line-height:1.6;
+}
+
+.close{
+    position:absolute;
+    top:10px;
+    right:15px;
+    color:red;
+    cursor:pointer;
+    font-size:20px;
+}
+
+@media(max-width:1000px){
+    .main{
+        grid-template-columns:1fr;
+    }
+
+    body{
+        overflow:auto;
+    }
+}
+
+
+.rain{
+    position:fixed;
+    width:100%;
+    height:100%;
+    background-image:linear-gradient(transparent, rgba(255,255,255,0.05));
+    background-size:2px 20px;
+    animation:rain 0.4s linear infinite;
+    opacity:0.2;
+    pointer-events:none;
+}
+
+@keyframes rain{
+    from{background-position:0 0;}
+    to{background-position:0 20px;}
+}
+
+.eye{
+    position:fixed;
+    width:120px;
+    height:60px;
+    border:3px solid red;
+    border-radius:50%;
+    top:20px;
+    left:50%;
+    transform:translateX(-50%);
+    box-shadow:0 0 20px red;
+    opacity:0;
+    animation:eyeBlink 8s infinite;
+    z-index:50;
+}
+
+.eye::before{
+    content:'';
+    position:absolute;
+    width:20px;
+    height:20px;
+    background:red;
+    border-radius:50%;
+    top:50%;
+    left:50%;
+    transform:translate(-50%,-50%);
+}
+
+@keyframes eyeBlink{
+    0%,90%,100%{opacity:0;}
+    92%,96%{opacity:1;}
+}
+
+.glitch{
+    animation:glitch 0.2s infinite alternate;
+}
+
+@keyframes glitch{
+    from{transform:translate(1px,-1px);}
+    to{transform:translate(-1px,1px);}
+}
+
+.kira{
+    color:red;
+    animation:blink 0.5s infinite;
+    text-shadow:0 0 10px red;
+}
+
+.clock{
+    position:fixed;
+    top:20px;
+    right:20px;
+    color:#00ff88;
+    font-size:18px;
+    z-index:100;
+}
+
+.secret-btn{
+    margin-top:20px;
+    padding:12px 20px;
+    background:black;
+    color:#00ff88;
+    border:1px solid #00ff88;
+    cursor:pointer;
+    font-family:inherit;
+    transition:0.3s;
+}
+
+.secret-btn:hover{
+    background:#00ff88;
+    color:black;
+    box-shadow:0 0 20px #00ff88;
+}
+
+.radar{
+    width:180px;
+    height:180px;
+    border:2px solid #00ff88;
+    border-radius:50%;
+    margin:20px auto;
+    position:relative;
+    overflow:hidden;
+}
+
+.radar-circle{
+    position:absolute;
+    width:100%;
+    height:100%;
+    border-radius:50%;
+    border:1px solid rgba(0,255,100,0.2);
+}
+
+.radar-line{
+    position:absolute;
+    width:50%;
+    height:2px;
+    background:#00ff88;
+    top:50%;
+    left:50%;
+    transform-origin:left center;
+    animation:radar 2s linear infinite;
+}
+
+@keyframes radar{
+    from{transform:rotate(0deg);}
+    to{transform:rotate(360deg);}
+}
+
+.profile-image{
+    width:100px;
+    border-radius:10px;
+    margin-bottom:15px;
+    border:1px solid #00ff88;
+}
+
+.intelligence{
+    margin-bottom:15px;
+}
+
+.intel-bar{
+    width:100%;
+    height:15px;
+    background:#111;
+    margin-top:5px;
+}
+
+.intel-fill{
+    width:95%;
+    height:100%;
+    background:linear-gradient(90deg,#00ff88,red);
+}
+
+.camera-effect{
+    position:fixed;
+    width:100%;
+    height:100%;
+    border:8px solid rgba(255,255,255,0.05);
+    pointer-events:none;
+    z-index:999;
+}
+
+.recording{
+    position:fixed;
+    top:20px;
+    left:20px;
+    color:red;
+    font-size:18px;
+    z-index:999;
+    animation:blink 1s infinite;
+}
+
+body{
+    cursor:crosshair;
+}
+
+.shake{
+    animation:shake 0.3s;
+}
+
+@keyframes shake{
+    0%{transform:translateX(0);} 
+    25%{transform:translateX(-5px);} 
+    50%{transform:translateX(5px);} 
+    75%{transform:translateX(-5px);} 
+    100%{transform:translateX(0);} 
+}
+
+.window{
+    position:fixed;
+    bottom:20px;
+    left:20px;
+    width:300px;
+    background:black;
+    border:1px solid #00ff88;
+    padding:10px;
+    z-index:999;
+    box-shadow:0 0 20px rgba(0,255,100,0.3);
+}
+
+</style>
+</head>
+<body>
+
+<canvas id="matrix"></canvas>
+<div class="overlay"></div>
+<div class="rain"></div>
+<div class="camera-effect"></div>
+<div class="recording">🔴 REC</div>
+<div class="clock" id="clock"></div>
+<div class="eye"></div>
+<div class="scanline"></div>
+
+<div class="container">
+
+    <div class="header">
+        <div class="logo glitch">L INVESTIGATION SYSTEM</div>
+        <div class="status">● ENCRYPTED ACCESS</div>
+    </div>
+
+    <div class="main">
+
+        <div class="panel">
+            <h2>SUSPEITOS</h2>
+
+            <div class="suspect" onclick="openProfile('KIRA','17 anos','Japão','99%','Extremamente inteligente e perigoso. Principal suspeito dos assassinatos misteriosos. Atua de forma estratégica, sem deixar rastros. Possui possível ligação com mortes cardíacas simultâneas em diferentes países.')">
+                <span class="kira">KIRA</span><br>
+                Ameaça: <span class="percentage">99%</span><br>
+                Crimes associados: 347<br>
+                Última atividade: 03:14 AM<br>
+                Status: FORAGIDO
+            </div>
+
+            <div class="suspect" onclick="openProfile('Light Yagami','17 anos','Tokyo','87%','Estudante exemplar com comportamento altamente suspeito. Inteligência fora do comum, notas perfeitas e mudanças bruscas de comportamento detectadas após início do Caso KIRA.')">
+                Nome: Light Yagami<br>
+                Compatibilidade: <span class="percentage">87%</span><br>
+                Ocupação: Estudante<br>
+                QI estimado: 210<br>
+                Monitoramento: ATIVO
+            </div>
+
+            <div class="suspect" onclick="openProfile('Desconhecido','???','Não identificado','72%','Poucas informações encontradas no sistema. Suspeito conectado a atividades ocultas em fóruns secretos e transmissões criptografadas.')">
+                Nome: Desconhecido<br>
+                Risco Global: <span class="percentage">72%</span><br>
+                Localização: Indefinida<br>
+                Rede ativa: DARK WEB<br>
+                Status: OBSERVAÇÃO
+            </div>
+
+            <div class="ai-box">
+                IA ANALISANDO PADRÕES...
+
+                <div class="progress">
+                    <div class="progress-bar"></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="panel">
+            <h2>MAPA CRIMINAL</h2>
+
+            <div class="map">
+                <div class="point"></div>
+                <div class="point"></div>
+                <div class="point"></div>
+            </div>
+
+            <div class="ai-box">
+                Crimes simultâneos detectados.
+                Possível ação sobrenatural.
+            </div>
+        </div>
+
+        <div class="panel">
+            <h2>INVESTIGAÇÃO</h2>
+
+            <div class="typing" id="typing"></div>
+        </div>
+    </div>
+
+    <div class="profile-modal" id="profileModal">
+        <div class="profile-box">
+            <span class="close" onclick="closeProfile()">✖</span>
+            <h2 id="profileName">Nome</h2>
+            <p><strong>Idade:</strong> <span id="profileAge"></span></p>
+            <p><strong>Local:</strong> <span id="profileLocation"></span></p>
+            <p><strong>Nível de suspeita:</strong> <span id="profileDanger"></span></p>
+            <img id="profileImage" src="https://i.imgur.com/1X4hY9P.png" class="profile-image">
+            <div class="intelligence">
+                Inteligência
+                <div class="intel-bar">
+                    <div class="intel-fill"></div>
+                </div>
+            </div>
+            <p><strong>Descrição:</strong></p>
+            <p id="profileDescription"></p>
+        </div>
+    </div>
+
+    <div class="terminal">
+        <div class="typing">
+> Conectando servidores internacionais...
+
+> Banco de dados criptografado.
+
+> Escaneando padrões cardíacos...
+
+> Inteligência artificial ativa.
+
+> Possível identidade de KIRA localizada.
+
+> ALERTA GLOBAL NÍVEL MÁXIMO.
+        </div>
+    </div>
+
+    <button class="secret-btn" onclick="openFiles()">📂 ACESSAR ARQUIVOS SECRETOS</button>
+
+    <div class="radar">
+        <div class="radar-circle"></div>
+        <div class="radar-line"></div>
+    </div>
+
+    <div class="footer">
+        <div>STATUS: ONLINE</div>
+        <div>SECURITY LEVEL: OMEGA</div>
+        <div>AI CORE ACTIVE</div>
+    </div>
+
+</div>
+
+<div class="warning">
+⚠ RESTRICTED ACCESS ⚠
+</div>
+
+<script>
+// MATRIX EFFECT
+const canvas = document.getElementById('matrix');
+const ctx = canvas.getContext('2d');
+
+canvas.width = window.innerWidth;
+canvas.height = window.innerHeight;
+
+const letters = '01アカサタナハマヤラワABCDEFGHIJKLMNOPQRSTUVWXYZ';
+const matrix = letters.split('');
+
+const fontSize = 14;
+const columns = canvas.width / fontSize;
+
+const drops = [];
+
+for(let i = 0; i < columns; i++){
+    drops[i] = 1;
+}
+
+function draw(){
+    ctx.fillStyle = 'rgba(0,0,0,0.05)';
+    ctx.fillRect(0,0,canvas.width,canvas.height);
+
+    ctx.fillStyle = '#00ff88';
+    ctx.font = fontSize + 'px monospace';
+
+    for(let i = 0; i < drops.length; i++){
+        const text = matrix[Math.floor(Math.random() * matrix.length)];
+
+        ctx.fillText(text, i * fontSize, drops[i] * fontSize);
+
+        if(drops[i] * fontSize > canvas.height && Math.random() > 0.975){
+            drops[i] = 0;
+        }
+
+        drops[i]++;
+    }
+}
+
+setInterval(draw, 35);
+
+// TYPING EFFECT
+const text = `
+[ SYSTEM LOG ]
+
+Inicializando sistema investigativo...
+
+Conectando servidores internacionais...
+
+Acessando banco de dados global...
+
+Criptografia ativada.
+
+Escaneando padrões de mortes...
+
+Analisando horários das vítimas...
+
+Comparando localização dos incidentes...
+
+97% de chance de ação humana inteligente.
+
+Possível uso de método desconhecido.
+
+Nenhum contato físico detectado.
+
+Padrão cardíaco repetitivo confirmado.
+
+Múltiplas mortes simultâneas encontradas.
+
+Analisando transmissões suspeitas...
+
+Conexão anônima detectada na DARK WEB.
+
+Rastreamento de IP iniciado...
+
+Falha ao identificar origem.
+
+Acessando câmeras de segurança...
+
+Detectando comportamento suspeito.
+
+Monitorando atividades escolares.
+
+Comparando inteligência dos suspeitos...
+
+QI acima da média encontrado.
+
+Perfil psicológico iniciado...
+
+Manipulação emocional: 96%
+Capacidade estratégica: 99%
+Empatia detectada: 2%
+Nível de ego: EXTREMO
+
+Análise facial concluída.
+
+Compatibilidade com KIRA:
+████████████░ 87%
+
+Escaneando impressões digitais...
+
+Nenhuma correspondência encontrada.
+
+Comparando DNA...
+
+DNA MATCH:
+█████████░░░ 82%
+
+Investigadores online:
+→ L
+→ Near
+→ Mello
+
+Satélite rastreando movimentações...
+
+GPS detectou atividade incomum.
+
+Última localização:
+TOKYO - JAPÃO
+
+Contador de vítimas atualizado:
+☠ 347 vítimas registradas.
+
+Ameaça mundial:
+☣️ NÍVEL VERMELHO
+
+Tentativa de invasão detectada...
+
+Ativando firewall...
+
+Proteção reforçada.
+
+Mensagem interceptada:
+“justice will prevail”
+
+ALERTA:
+Possível novo incidente em menos de 02:14:33
+
+Recomendação:
+
+→ Monitorar Light Yagami 24h.
+→ Restringir acesso aos arquivos secretos.
+→ Aumentar vigilância internacional.
+→ Preparar protocolo anti-KIRA.
+→ Autorizar investigação máxima.
+
+STATUS FINAL:
+☣️ AMEAÇA GLOBAL EXTREMA
+🔴 KIRA POSSIVELMENTE ONLINE
+`;
+
+let i = 0;
+const speed = 40;
+
+function typeWriter(){
+    if(i < text.length){
+        document.getElementById('typing').innerHTML += text.charAt(i);
+        i++;
+        setTimeout(typeWriter, speed);
+    }
+}
+
+typeWriter();
+
+window.addEventListener('resize', () => {
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+});
+
+// PROFILE SYSTEM
+function openProfile(name, age, location, danger, description){
+    document.getElementById('profileModal').style.display = 'flex';
+
+    document.getElementById('profileName').innerText = name;
+    document.getElementById('profileAge').innerText = age;
+    document.getElementById('profileLocation').innerText = location;
+    document.getElementById('profileDanger').innerText = danger;
+    document.getElementById('profileDescription').innerText = description;
+}
+
+// CLOCK
+setInterval(() => {
+    const now = new Date();
+    document.getElementById('clock').innerText = now.toLocaleTimeString();
+},1000);
+
+// RANDOM ALERTS
+setInterval(() => {
+    document.body.classList.add('shake');
+
+    setTimeout(() => {
+        document.body.classList.remove('shake');
+    },300);
+
+    console.log('⚠ SUSPEITO DETECTADO');
+},8000);
+
+// SECRET FILES
+function openFiles(){
+    const win = document.createElement('div');
+    win.className = 'window';
+    win.innerHTML = `
+        <h3>ARQUIVOS SECRETOS</h3>
+        <p>• Caso KIRA</p>
+        <p>• Relatório confidencial</p>
+        <p>• Identidade desconhecida</p>
+    `;
+
+    document.body.appendChild(win);
+}
+
+// KEYBOARD SOUND
+window.addEventListener('keydown', () => {
+    const audio = new Audio('https://www.soundjay.com/mechanical/keyboard-1.mp3');
+    audio.volume = 0.1;
+    audio.play();
+});
+
+function closeProfile(){
+    document.getElementById('profileModal').style.display = 'none';
+}
+</script>
+
+</body>
+</html>
